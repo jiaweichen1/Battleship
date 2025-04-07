@@ -28,7 +28,6 @@ class Board {
         }
     }
 
-    // Places ship on board if space is valid and not overlapping
     boolean placeShip(String name, int size, int row, int col, boolean horizontal) {
         if (horizontal) {
             if (col + size > 10) return false;
@@ -52,17 +51,16 @@ class Board {
         return true;
     }
 
-    // Handles an attack at a given position
     boolean attack(int row, int col) {
         char cell = grid[row][col];
 
         if (cell == '~') {
-            grid[row][col] = 'M'; // Miss
+            grid[row][col] = 'M';
             return false;
         } else if (cell == 'X' || cell == 'M') {
-            return false; // Already hit or miss
+            return false;
         } else {
-            grid[row][col] = 'X'; // Hit
+            grid[row][col] = 'X';
             for (Ship ship : ships.values()) {
                 if (ship.name.charAt(0) == cell) {
                     ship.hitCount++;
@@ -73,7 +71,6 @@ class Board {
         }
     }
 
-    // Checks if all ships have been sunk
     boolean allShipsSunk() {
         for (Ship ship : ships.values()) {
             if (!ship.isSunk()) {
@@ -83,7 +80,6 @@ class Board {
         return true;
     }
 
-    // Displays the board, optionally hiding ships
     void print(boolean hideShips) {
         System.out.print("  ");
         for (int i = 0; i < 10; i++) {
@@ -110,8 +106,19 @@ public class BattleshipGame {
     static Scanner scanner = new Scanner(System.in);
 
     public static void main(String[] args) {
-        System.out.print("Select mode: 1 for Single Player, 2 for Two Player: ");
-        int mode = scanner.nextInt();
+        int mode = 0;
+        while (mode < 1 || mode > 3) {
+            System.out.print("Select mode: 1 for Single Player, 2 for Two Player, 3 for Easy AI: ");
+            if (scanner.hasNextInt()) {
+                mode = scanner.nextInt();
+                if (mode < 1 || mode > 3) {
+                    System.out.println("Invalid input. Please enter 1, 2, or 3.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.next();
+            }
+        }
 
         Board player1Board = new Board();
         Board player2Board = new Board();
@@ -119,12 +126,10 @@ public class BattleshipGame {
         System.out.println("\nPlayer 1, place your ships:");
         placeAllShips(player1Board, false);
 
-        if (mode == 1) {
-            // Single-player: Computer is opponent
+        if (mode == 1 || mode == 3) {
             System.out.println("\nComputer placing ships...");
             placeAllShips(player2Board, true);
         } else {
-            // Two-player mode
             System.out.println("\nPlayer 2, place your ships:");
             placeAllShips(player2Board, false);
         }
@@ -134,14 +139,23 @@ public class BattleshipGame {
         while (true) {
             Board attackerBoard = player1Turn ? player1Board : player2Board;
             Board targetBoard = player1Turn ? player2Board : player1Board;
-            String attackerName = player1Turn ? "Player 1" : (mode == 1 ? "Computer" : "Player 2");
+            String attackerName;
+
+            if (player1Turn) {
+                attackerName = "Player 1";
+            } else if (mode == 1 || mode == 3) {
+                attackerName = "Computer";
+            } else {
+                attackerName = "Player 2";
+            }
 
             System.out.println("\n" + attackerName + "'s Turn:");
 
             if (attackerName.equals("Computer")) {
-                // Computer turn logic
                 Random rand = new Random();
-                int cr, cc;
+                int cr = 0, cc = 0;
+
+                // Easy AI: Attacks randomly
                 do {
                     cr = rand.nextInt(10);
                     cc = rand.nextInt(10);
@@ -154,11 +168,29 @@ public class BattleshipGame {
                     System.out.println("Computer missed.");
                 }
             } else {
-                // Player turn logic
                 targetBoard.print(true);
-                System.out.print("Enter your attack (row col): ");
-                int r = scanner.nextInt();
-                int c = scanner.nextInt();
+                int r = -1, c = -1;
+                boolean validInput = false;
+                while (!validInput) {
+                    System.out.print("Enter your attack (row col): ");
+                    if (scanner.hasNextInt()) {
+                        r = scanner.nextInt();
+                        if (scanner.hasNextInt()) {
+                            c = scanner.nextInt();
+                            if (r >= 0 && r < 10 && c >= 0 && c < 10) {
+                                validInput = true;
+                            } else {
+                                System.out.println("Invalid coordinates. Enter numbers between 0 and 9.");
+                            }
+                        } else {
+                            System.out.println("Invalid input. Please enter two integers.");
+                            scanner.next();
+                        }
+                    } else {
+                        System.out.println("Invalid input. Please enter two integers.");
+                        scanner.next();
+                    }
+                }
 
                 if (targetBoard.attack(r, c)) {
                     System.out.println("Hit!");
@@ -167,7 +199,6 @@ public class BattleshipGame {
                 }
             }
 
-            // Check for winner
             if (targetBoard.allShipsSunk()) {
                 System.out.println("\n" + attackerName + " wins!");
                 break;
@@ -177,7 +208,6 @@ public class BattleshipGame {
         }
     }
 
-    // Places all ships on the board, either manually or randomly
     static void placeAllShips(Board board, boolean random) {
         int[] sizes = {5, 4, 3, 3, 2};
         String[] names = {"Carrier", "Battleship", "Cruiser", "Submarine", "Destroyer"};
@@ -198,15 +228,32 @@ public class BattleshipGame {
         }
     }
 
-    // Get coordinate input from player
     static int getCoord(String prompt) {
-        System.out.print("Enter " + prompt + ": ");
-        return scanner.nextInt();
+        int coord = -1;
+        while (coord < 0 || coord >= 10) {
+            System.out.print("Enter " + prompt + ": ");
+            if (scanner.hasNextInt()) {
+                coord = scanner.nextInt();
+                if (coord < 0 || coord >= 10) {
+                    System.out.println("Please enter a number between 0 and 9.");
+                }
+            } else {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.next();
+            }
+        }
+        return coord;
     }
 
-    // Get direction input from player (horizontal or vertical)
     static boolean getDirection() {
-        System.out.print("Horizontal? (true/false): ");
-        return scanner.nextBoolean();
+        while (true) {
+            System.out.print("Horizontal? (true/false): ");
+            if (scanner.hasNextBoolean()) {
+                return scanner.nextBoolean();
+            } else {
+                System.out.println("Invalid input. Please enter true or false.");
+                scanner.next();
+            }
+        }
     }
 }
